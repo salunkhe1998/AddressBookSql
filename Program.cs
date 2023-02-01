@@ -22,6 +22,8 @@ namespace AdvancedAddressBookProblem
                 Console.WriteLine("Choose an option");
                 Console.WriteLine("1 to Insert in AddressBook");
                 Console.WriteLine("2 to Update details of contact that already exists");
+                Console.WriteLine("3 to Update details of a contact that already exists");
+                Console.WriteLine("4 to Delete a contact");
                 Console.WriteLine("0 to EXIT");
                 option = Convert.ToInt32(Console.ReadLine());
                 switch (option)
@@ -36,6 +38,12 @@ namespace AdvancedAddressBookProblem
                         break;
                     case 2:
                         program.UpdateDetails();
+                        break;
+                    case 3:
+                        program.UpdateDetails();
+                        break;
+                    case 4:
+                        program.RemoveContact();
                         break;
                     default:
                         break;
@@ -136,6 +144,24 @@ namespace AdvancedAddressBookProblem
             cmd.Parameters.AddWithValue("@OriginalFirstName", FirstName);
             AddDetails(componentModel);
             InsertBasicDetails(cmd, componentModel);
+        }
+
+        public void RemoveContact()
+        {
+            Console.Write("\nEnter the First Name: ");
+            string FirstName = Console.ReadLine();
+            if (ContactExists(FirstName) == 0)
+            {
+                Console.WriteLine("No such contact Exists.\n");
+                return;
+            }
+            Console.WriteLine("Contact Exists.");
+            SPstr = "dbo.RemoveContact";
+            SqlCommand cmd = new SqlCommand(SPstr, connection);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@FirstName", FirstName);
+            cmd.ExecuteNonQuery();
+            Console.WriteLine("Contact with first name, {0} was deleted.\n", FirstName);
         }
     }
 }
