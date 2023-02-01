@@ -24,6 +24,7 @@ namespace AdvancedAddressBookProblem
                 Console.WriteLine("2 to Update details of contact that already exists");
                 Console.WriteLine("3 to Update details of a contact that already exists");
                 Console.WriteLine("4 to Delete a contact");
+                Console.WriteLine("5 to Get contacts by city or state");
                 Console.WriteLine("0 to EXIT");
                 option = Convert.ToInt32(Console.ReadLine());
                 switch (option)
@@ -44,6 +45,14 @@ namespace AdvancedAddressBookProblem
                         break;
                     case 4:
                         program.RemoveContact();
+                        break;
+                    case 5:
+                        List<string> Names = program.ContactsByCityOrState();
+                        foreach (string name in Names)
+                        {
+                            componentModel = program.GetDetailsForAName(name);
+                            program.DisplayDetails(componentModel);
+                        }
                         break;
                     default:
                         break;
@@ -106,6 +115,20 @@ namespace AdvancedAddressBookProblem
             cmd.Parameters.AddWithValue("@Email", componentModel.Email);
             cmd.ExecuteNonQuery();
         }
+
+        public ComponentModel WriteToContactsClass(ComponentModel contact, SqlDataReader reader)
+        {
+            contact.FirstName = reader.GetString(0);
+            contact.LastName = reader.GetString(1);
+            contact.Address = reader.GetString(2);
+            contact.City = reader.GetString(3);
+            contact.State = reader.GetString(4);
+            contact.ZipCode = reader.GetString(5);
+            contact.PhoneNumber = reader.GetString(6);
+            contact.Email = reader.GetString(7);
+            return contact;
+        }
+
         public void DisplayDetails(ComponentModel componentModel)
         {
             Console.WriteLine("\n-------------------------------------------------------");
@@ -127,6 +150,26 @@ namespace AdvancedAddressBookProblem
             cmd.ExecuteNonQuery();
             return (int)returnValue.Value;
         }
+
+        public ComponentModel GetDetailsForAName(string FirstName)
+        {
+            ComponentModel componentModel = new ComponentModel();
+            SPstr = "dbo.AccessDetailsForFirstName";
+            SqlCommand cmd = new SqlCommand(SPstr, connection);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@FirstName", FirstName);
+            SqlDataReader reader = cmd.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    WriteToContactsClass(componentModel, reader);
+                }
+            }
+            reader.Close();
+            return componentModel;
+        }
+
         public void UpdateDetails()
         {
             Console.Write("\nEnter the First Name: ");
@@ -162,6 +205,37 @@ namespace AdvancedAddressBookProblem
             cmd.Parameters.AddWithValue("@FirstName", FirstName);
             cmd.ExecuteNonQuery();
             Console.WriteLine("Contact with first name, {0} was deleted.\n", FirstName);
+        }
+
+        public List<string> ContactsByCityOrState()
+        {
+            List<string> FirstNames = new List<string>();
+            Console.Write("\nSearch for City or State: ");
+            string check = Console.ReadLine();
+            Console.Write("Enter the name of {0}: ", check);
+            string CityOrStateName = Console.ReadLine();
+            int control;
+            if (check.ToLower() == "city")
+                control = 0;
+            else if (check.ToLower() == "state")
+                control = 1;
+            else return null;
+            SPstr = "dbo.ContactsByCityOrState";
+            SqlCommand cmd = new SqlCommand(SPstr, connection);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@City_State_Name", CityOrStateName);
+            cmd.Parameters.AddWithValue("@City_or_State", control);
+            SqlDataReader reader = cmd.ExecuteReader();
+            if (reader.HasRows)
+            {
+                while (reader.Read())
+                {
+                    string FirstName = reader.GetString(0);
+                    FirstNames.Add(FirstName);
+                }
+            }
+            reader.Close();
+            return FirstNames;
         }
     }
 }
