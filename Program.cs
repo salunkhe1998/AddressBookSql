@@ -7,6 +7,7 @@ namespace AdvancedAddressBookProblem
     {
         static string ConnectionStr = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=PayRollService240;Integrated Security=True";
         SqlConnection connection = new SqlConnection(ConnectionStr);
+        private string SPstr;
 
         public static void Main(string[] args)
         {
@@ -20,6 +21,7 @@ namespace AdvancedAddressBookProblem
             {
                 Console.WriteLine("Choose an option");
                 Console.WriteLine("1 to Insert in AddressBook");
+                Console.WriteLine("2 to Update details of contact that already exists");
                 Console.WriteLine("0 to EXIT");
                 option = Convert.ToInt32(Console.ReadLine());
                 switch (option)
@@ -32,6 +34,9 @@ namespace AdvancedAddressBookProblem
                             program.InsertContact();
                         }
                         break;
+                    case 2:
+                        program.UpdateDetails();
+                        break;
                     default:
                         break;
                 }
@@ -42,12 +47,19 @@ namespace AdvancedAddressBookProblem
         {
             ComponentModel componentModel = new ComponentModel();
             Console.WriteLine("\nFill in the details");
+            AddDetails(componentModel);
+            InsertContact(componentModel);
+            Console.WriteLine("Contact information for {0} {1} was saved to the database.\n",
+                componentModel.FirstName, componentModel.LastName);
+        }
+        public ComponentModel AddDetails(ComponentModel componentModel)
+        {
             Console.Write("Enter First Name: ");
             componentModel.FirstName = Console.ReadLine();
             if (componentModel.FirstName == "")
             {
                 Console.WriteLine("First name can't be empty");
-                return;
+                return componentModel;
             }
             Console.Write("Enter Last Name: ");
             componentModel.LastName = Console.ReadLine();
@@ -64,15 +76,18 @@ namespace AdvancedAddressBookProblem
             Console.Write("Enter Email: ");
             componentModel.Email = Console.ReadLine();
             DisplayDetails(componentModel);
-            InsertContact(componentModel);
-            Console.WriteLine("Contact information for {0} {1} was saved to the database.\n",
-                componentModel.FirstName, componentModel.LastName);
+            return componentModel;
         }
         public void InsertContact(ComponentModel componentModel)
         {
             string SPstr = "dbo.InsertContact";
             SqlCommand cmd = new SqlCommand(SPstr, connection);
             cmd.CommandType = CommandType.StoredProcedure;
+            InsertBasicDetails(cmd, componentModel);
+        }
+        public void InsertBasicDetails(SqlCommand cmd, ComponentModel componentModel)
+        {
+
             cmd.Parameters.AddWithValue("@FirstName", componentModel.FirstName);
             cmd.Parameters.AddWithValue("@LastName", componentModel.LastName);
             cmd.Parameters.AddWithValue("@Address", componentModel.Address);
@@ -81,7 +96,7 @@ namespace AdvancedAddressBookProblem
             cmd.Parameters.AddWithValue("@ZipCode", componentModel.ZipCode);
             cmd.Parameters.AddWithValue("@PhoneNumber", componentModel.PhoneNumber);
             cmd.Parameters.AddWithValue("@Email", componentModel.Email);
-            //cmd.ExecuteNonQuery();
+            cmd.ExecuteNonQuery();
         }
         public void DisplayDetails(ComponentModel componentModel)
         {
@@ -91,7 +106,36 @@ namespace AdvancedAddressBookProblem
                 componentModel.LastName, componentModel.Address, componentModel.City, componentModel.State, componentModel.ZipCode,
                 componentModel.PhoneNumber, componentModel.Email);
             Console.WriteLine("-------------------------------------------------------\n");
+        }
 
+        public int ContactExists(string FirstName)
+        {
+            SPstr = "dbo.ContactExists";
+            SqlCommand cmd = new SqlCommand(SPstr, connection);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@FirstName", FirstName);
+            var returnValue = cmd.Parameters.Add("@result", SqlDbType.Int);
+            returnValue.Direction = ParameterDirection.ReturnValue;
+            cmd.ExecuteNonQuery();
+            return (int)returnValue.Value;
+        }
+        public void UpdateDetails()
+        {
+            Console.Write("\nEnter the First Name: ");
+            string FirstName = Console.ReadLine();
+            if (ContactExists(FirstName) == 0)
+            {
+                Console.WriteLine("No such contact Exists.\n");
+                return;
+            }
+            Console.WriteLine("Contact Exists, Enter the rest of details,");
+            ComponentModel componentModel = new();
+            SPstr = "dbo.UpdateDetails";
+            SqlCommand cmd = new SqlCommand(SPstr, connection);
+            cmd.CommandType = CommandType.StoredProcedure;
+            cmd.Parameters.AddWithValue("@OriginalFirstName", FirstName);
+            AddDetails(componentModel);
+            InsertBasicDetails(cmd, componentModel);
         }
     }
 }
